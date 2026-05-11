@@ -129,6 +129,7 @@ __global__ void mine_kernel(
 
         // Initialize state to zero
         uint64_t state[25];
+        uint64_t h0, h1, h2, h3;
         #pragma unroll
         for (int j = 0; j < 25; j++) state[j] = 0;
 
