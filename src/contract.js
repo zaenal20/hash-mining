@@ -49,18 +49,21 @@ class HashContract {
         return await this.readContract.epochBlocksLeft();
     }
 
-    async submitMine(nonce, maxGasPriceGwei) {
+    async submitMine(nonce, maxGasPriceGwei, tipGwei = 1) {
         const feeData = await this.provider.getFeeData();
         const maxGasPrice = ethers.parseUnits(maxGasPriceGwei.toString(), 'gwei');
+        const tip = ethers.parseUnits(tipGwei.toString(), 'gwei');
 
         if (feeData.gasPrice > maxGasPrice) {
             throw new Error(`Gas price ${ethers.formatUnits(feeData.gasPrice, 'gwei')} gwei exceeds max ${maxGasPriceGwei} gwei`);
         }
 
+        const maxFeePerGas = (feeData.maxFeePerGas || feeData.gasPrice) + tip;
+
         const tx = await this.contract.mine(nonce, {
             gasLimit: 250000n,
-            maxFeePerGas: feeData.maxFeePerGas,
-            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+            maxFeePerGas: maxFeePerGas,
+            maxPriorityFeePerGas: tip,
         });
 
         return tx;

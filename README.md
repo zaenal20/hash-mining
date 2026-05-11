@@ -109,6 +109,8 @@ Sesuaikan parameter di `.env` untuk GPU lu:
 | RTX 4090 | 1024 | 256 | 256 |
 | RTX 5070 | 512 | 256 | 128 |
 | RTX 5080 | 1024 | 256 | 256 |
+| RTX 5090 | 2048 | 256 | 512 |
+| RTX 6000 Ada | 2048 | 256 | 512 |
 | A100 | 2048 | 512 | 512 |
 
 ## Info Contract

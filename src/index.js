@@ -10,6 +10,7 @@ const RPC_URL = process.env.RPC_URL || 'https://ethereum-public.nodies.app/';
 const TX_RPC_URL = process.env.TX_RPC_URL; // Private RPC like Flashbots
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const MAX_GAS_PRICE_GWEI = parseInt(process.env.MAX_GAS_PRICE_GWEI || '15');
+const TIP_GWEI = parseInt(process.env.TIP_GWEI || '2'); // Tip for builder
 const CUDA_GRID = parseInt(process.env.CUDA_GRID || '512');
 const CUDA_BLOCKS = parseInt(process.env.CUDA_BLOCKS || '256');
 const CUDA_NPT = parseInt(process.env.CUDA_NPT || '128');
@@ -43,7 +44,7 @@ async function main() {
     log.info(`Miner address: ${minerAddress}`);
     log.info(`Read RPC: ${RPC_URL}`);
     if (TX_RPC_URL) log.info(`Write RPC (Private): ${TX_RPC_URL}`);
-    log.info(`Max gas price: ${MAX_GAS_PRICE_GWEI} gwei`);
+    log.info(`Max gas price: ${MAX_GAS_PRICE_GWEI} gwei | Miner Tip: ${TIP_GWEI} gwei`);
 
     // Check ETH balance
     const balance = await contract.getBalance();
@@ -169,9 +170,9 @@ async function main() {
             log.success(`Solution found! Nonce: ${nonce}`);
 
             // Submit transaction
-            log.info('Submitting mine() transaction...');
+            log.info(`Submitting mine(nonce) transaction with ${TIP_GWEI} gwei tip...`);
             try {
-                const tx = await contract.submitMine(nonce, MAX_GAS_PRICE_GWEI);
+                const tx = await contract.submitMine(nonce, MAX_GAS_PRICE_GWEI, TIP_GWEI);
                 log.success(`TX submitted: ${tx.hash}`);
                 log.info('Waiting for confirmation...');
 
