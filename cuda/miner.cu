@@ -138,33 +138,25 @@ __global__ void mine_kernel(
         state[2] = d_challenge[2];
         state[3] = d_challenge[3];
 
-        // Absorb nonce (bytes 32-63)
-        // nonce is uint256 big-endian, only last 8 bytes non-zero
-        // state[4]=0, state[5]=0, state[6]=0
-        // state[7] = bytes 56-63 as LE = bswap64(nonce)
         state[7] = bswap64(nonce);
-
-        // Keccak padding (domain=0x01 for original keccak, NOT SHA-3's 0x06)
         state[8] = 0x01ULL;
         state[16] = 0x8000000000000000ULL;
 
-        // Apply keccak-f[1600]
         keccak_f1600(state);
 
-        // Compare hash < target (big-endian uint256 comparison)
-        uint64_t h0 = bswap64(state[0]); // most significant
+        h0 = bswap64(state[0]);
         if (h0 > d_target[0]) continue;
         if (h0 < d_target[0]) goto found_solution;
 
-        uint64_t h1 = bswap64(state[1]);
+        h1 = bswap64(state[1]);
         if (h1 > d_target[1]) continue;
         if (h1 < d_target[1]) goto found_solution;
 
-        uint64_t h2 = bswap64(state[2]);
+        h2 = bswap64(state[2]);
         if (h2 > d_target[2]) continue;
         if (h2 < d_target[2]) goto found_solution;
 
-        uint64_t h3 = bswap64(state[3]);
+        h3 = bswap64(state[3]);
         if (h3 >= d_target[3]) continue;
 
         found_solution:
