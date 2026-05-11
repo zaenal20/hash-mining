@@ -1,0 +1,21 @@
+# Environment - JANGAN PERNAH COMMIT INI!
+.env
+
+# CUDA compiled binary
+cuda/miner
+cuda/miner.exe
+cuda/test
+cuda/test.cu
+cuda/*.o
+
+# Node.js
+node_modules/
+npm-debug.log*
+
+# Logs
+*.log
+mining.log
+
+# OS
+.DS_Store
+Thumbs.db

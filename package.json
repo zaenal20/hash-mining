@@ -1,0 +1,14 @@
+{
+  "name": "hash-gpu-miner",
+  "version": "1.0.0",
+  "description": "$HASH GPU Miner — CUDA + Node.js",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "check": "node src/check.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.0"
+  }
+}
