@@ -16,9 +16,10 @@ const MINING_ABI = [
 ];
 
 class HashContract {
-    constructor(rpcUrl, privateKey) {
+    constructor(rpcUrl, privateKey, txRpcUrl = null) {
         this.provider = new ethers.JsonRpcProvider(rpcUrl);
-        this.wallet = new ethers.Wallet(privateKey, this.provider);
+        this.txProvider = txRpcUrl ? new ethers.JsonRpcProvider(txRpcUrl) : this.provider;
+        this.wallet = new ethers.Wallet(privateKey, this.txProvider);
         this.contract = new ethers.Contract(CONTRACT_ADDRESS, MINING_ABI, this.wallet);
         this.readContract = new ethers.Contract(CONTRACT_ADDRESS, MINING_ABI, this.provider);
     }

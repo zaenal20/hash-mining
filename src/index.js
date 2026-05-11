@@ -7,6 +7,7 @@ const { log } = require('./logger');
 
 // ==================== CONFIG ====================
 const RPC_URL = process.env.RPC_URL || 'https://ethereum-public.nodies.app/';
+const TX_RPC_URL = process.env.TX_RPC_URL; // Private RPC like Flashbots
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const MAX_GAS_PRICE_GWEI = parseInt(process.env.MAX_GAS_PRICE_GWEI || '15');
 const CUDA_GRID = parseInt(process.env.CUDA_GRID || '512');
@@ -36,11 +37,12 @@ async function main() {
     log.hash('═══════════════════════════════════════');
 
     // Initialize contract
-    const contract = new HashContract(RPC_URL, PRIVATE_KEY);
+    const contract = new HashContract(RPC_URL, PRIVATE_KEY, TX_RPC_URL);
     const minerAddress = contract.getAddress();
 
     log.info(`Miner address: ${minerAddress}`);
-    log.info(`RPC: ${RPC_URL}`);
+    log.info(`Read RPC: ${RPC_URL}`);
+    if (TX_RPC_URL) log.info(`Write RPC (Private): ${TX_RPC_URL}`);
     log.info(`Max gas price: ${MAX_GAS_PRICE_GWEI} gwei`);
 
     // Check ETH balance
