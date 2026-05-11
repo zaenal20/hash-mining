@@ -108,6 +108,7 @@ Sesuaikan parameter di `.env` untuk GPU lu:
 | RTX 3080 | 256 | 256 | 128 |
 | RTX 4090 | 1024 | 256 | 256 |
 | RTX 5070 | 512 | 256 | 128 |
+| RTX 5080 | 1024 | 256 | 256 |
 | A100 | 2048 | 512 | 512 |
 
 ## Info Contract
