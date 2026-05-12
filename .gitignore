@@ -21,3 +21,6 @@ mining.log
 Thumbs.db
 
 hash98-mining/
+verify_hash.js
+generate-wallet.js
+abi.json

@@ -117,8 +117,9 @@ async function main() {
             log.mine(`Challenge: 0x${challengeHex.slice(0, 16)}...`);
             log.mine(`Target:    0x${targetHex.slice(0, 16)}...`);
 
-            // Random start nonce to avoid collision with other miners
-            const startNonce = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+            // Random 256-bit start nonce to explore different parts of the space
+            // 32 bytes = 64 hex characters
+            const startNonce = ethers.hexlify(ethers.randomBytes(32)).slice(2);
 
             // Start CUDA miner
             const noncePromise = new Promise((resolve, reject) => {

@@ -114,18 +114,18 @@ __device__ void keccak_f1600(uint64_t *state) {
 // ==================== MINING KERNEL ====================
 
 __global__ void mine_kernel(
-    uint64_t start_nonce,
+    uint64_t n0, uint64_t n1, uint64_t n2, uint64_t n3,
     uint64_t *result_nonce,
     uint32_t *found,
     uint32_t nonces_per_thread
 ) {
     uint64_t tid = (uint64_t)blockIdx.x * blockDim.x + threadIdx.x;
-    uint64_t base_nonce = start_nonce + tid * nonces_per_thread;
+    uint64_t base_nonce_low = n3 + tid * nonces_per_thread;
 
     for (uint32_t i = 0; i < nonces_per_thread; i++) {
         if (*found) return;
 
-        uint64_t nonce = base_nonce + i;
+        uint64_t nonce_low = base_nonce_low + i;
 
         // Initialize state to zero
         uint64_t state[25];
@@ -139,7 +139,10 @@ __global__ void mine_kernel(
         state[2] = d_challenge[2];
         state[3] = d_challenge[3];
 
-        state[7] = bswap64(nonce);
+        state[4] = bswap64(n0);
+        state[5] = bswap64(n1);
+        state[6] = bswap64(n2);
+        state[7] = bswap64(nonce_low);
         state[8] = 0x01ULL;
         state[16] = 0x8000000000000000ULL;
 
@@ -162,7 +165,10 @@ __global__ void mine_kernel(
 
         found_solution:
         if (atomicCAS(found, 0u, 1u) == 0u) {
-            *result_nonce = nonce;
+            result_nonce[0] = n0;
+            result_nonce[1] = n1;
+            result_nonce[2] = n2;
+            result_nonce[3] = nonce_low;
         }
         return;
     }
@@ -177,17 +183,41 @@ void hex_to_bytes(const char *hex, uint8_t *bytes, int len) {
 }
 
 int main(int argc, char **argv) {
-    if (argc < 3) {
-        fprintf(stderr, "Usage: %s <challenge_hex_64> <target_hex_64> [start_nonce] [grid_size] [block_size] [nonces_per_thread]\n", argv[0]);
+    if (argc < 4) {
+        fprintf(stderr, "Usage: %s <challenge_hex_64> <target_hex_64> <start_nonce_hex_64> [grid_size] [block_size] [nonces_per_thread]\n", argv[0]);
         return 1;
     }
 
     const char *challenge_hex = argv[1];
     const char *target_hex = argv[2];
-    uint64_t start_nonce = argc > 3 ? strtoull(argv[3], NULL, 10) : 0;
+    const char *start_nonce_hex = argv[3];
     int grid_size = argc > 4 ? atoi(argv[4]) : 512;
     int block_size = argc > 5 ? atoi(argv[5]) : 256;
     uint32_t nonces_per_thread = argc > 6 ? (uint32_t)atoi(argv[6]) : 128;
+
+    // Parse start_nonce -> 4 x uint64 BE
+    uint8_t nonce_bytes[32];
+    // Pad or read 32 bytes from hex string (which may be shorter or exactly 64 chars)
+    memset(nonce_bytes, 0, 32);
+    int hex_len = strlen(start_nonce_hex);
+    if (hex_len > 64) hex_len = 64;
+    int offset = 64 - hex_len; // right align
+    for (int i = 0; i < hex_len; i += 2) {
+        int byte_idx = (offset + i) / 2;
+        char byte_str[3] = { start_nonce_hex[i], start_nonce_hex[i+1], 0 };
+        if (i + 1 >= hex_len) {
+            byte_str[0] = '0';
+            byte_str[1] = start_nonce_hex[i];
+        }
+        nonce_bytes[byte_idx] = (uint8_t)strtoul(byte_str, NULL, 16);
+    }
+    uint64_t h_nonce[4];
+    for (int i = 0; i < 4; i++) {
+        h_nonce[i] = 0;
+        for (int j = 0; j < 8; j++) {
+            h_nonce[i] = (h_nonce[i] << 8) | nonce_bytes[i * 8 + j];
+        }
+    }
 
     // Parse challenge -> 4 x uint64 LE
     uint8_t challenge_bytes[32];
@@ -218,12 +248,11 @@ int main(int argc, char **argv) {
     // Allocate device memory
     uint64_t *d_result_nonce;
     uint32_t *d_found;
-    cudaMalloc(&d_result_nonce, sizeof(uint64_t));
+    cudaMalloc(&d_result_nonce, 4 * sizeof(uint64_t));
     cudaMalloc(&d_found, sizeof(uint32_t));
 
     uint64_t total_threads = (uint64_t)grid_size * block_size;
     uint64_t nonces_per_batch = total_threads * nonces_per_thread;
-    uint64_t current_nonce = start_nonce;
     uint64_t total_hashes = 0;
 
     fprintf(stderr, "HASH GPU Miner started\n");
@@ -231,6 +260,9 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Nonces per batch: %llu\n", (unsigned long long)nonces_per_batch);
     fprintf(stderr, "Challenge: %s\n", challenge_hex);
     fprintf(stderr, "Target: %s\n", target_hex);
+    fprintf(stderr, "Base Nonce: %016llx%016llx%016llx%016llx\n", 
+            (unsigned long long)h_nonce[0], (unsigned long long)h_nonce[1], 
+            (unsigned long long)h_nonce[2], (unsigned long long)h_nonce[3]);
     fflush(stderr);
 
     struct timespec ts_start, ts_now;
@@ -243,7 +275,7 @@ int main(int argc, char **argv) {
         cudaMemcpy(d_found, &zero, sizeof(uint32_t), cudaMemcpyHostToDevice);
 
         // Launch kernel
-        mine_kernel<<<grid_size, block_size>>>(current_nonce, d_result_nonce, d_found, nonces_per_thread);
+        mine_kernel<<<grid_size, block_size>>>(h_nonce[0], h_nonce[1], h_nonce[2], h_nonce[3], d_result_nonce, d_found, nonces_per_thread);
         cudaDeviceSynchronize();
 
         // Check for errors
@@ -260,10 +292,12 @@ int main(int argc, char **argv) {
         total_hashes += nonces_per_batch;
 
         if (h_found) {
-            uint64_t result;
-            cudaMemcpy(&result, d_result_nonce, sizeof(uint64_t), cudaMemcpyDeviceToHost);
+            uint64_t result[4];
+            cudaMemcpy(result, d_result_nonce, 4 * sizeof(uint64_t), cudaMemcpyDeviceToHost);
             // Output to stdout for Node.js to read
-            printf("FOUND:%llu\n", (unsigned long long)result);
+            printf("FOUND:0x%016llx%016llx%016llx%016llx\n", 
+                (unsigned long long)result[0], (unsigned long long)result[1], 
+                (unsigned long long)result[2], (unsigned long long)result[3]);
             fflush(stdout);
             break;
         }
@@ -274,13 +308,13 @@ int main(int argc, char **argv) {
         if (elapsed >= 2.0) {
             double total_elapsed = (ts_now.tv_sec - ts_start.tv_sec) + (ts_now.tv_nsec - ts_start.tv_nsec) / 1e9;
             double hashrate = total_hashes / total_elapsed;
-            fprintf(stderr, "Hashrate: %.2f MH/s | Total: %llu | Nonce: %llu\n",
-                    hashrate / 1e6, (unsigned long long)total_hashes, (unsigned long long)current_nonce);
+            fprintf(stderr, "Hashrate: %.2f MH/s | Total: %llu\n",
+                    hashrate / 1e6, (unsigned long long)total_hashes);
             fflush(stderr);
             ts_last_report = ts_now;
         }
 
-        current_nonce += nonces_per_batch;
+        h_nonce[3] += nonces_per_batch;
 
         // Check for stdin signal to stop (non-blocking)
         // The Node.js parent will kill the process on epoch change
