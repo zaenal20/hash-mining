@@ -8,7 +8,9 @@
 # apakah ia bisa menemukan nonce yang valid.
 
 echo "Membangun ulang (compiling) miner..."
-nvcc -O3 -arch=sm_89 -o cuda/miner cuda/miner.cu
+cd cuda
+# Flag -arch=sm_89 sangat disarankan untuk RTX 4090/5090 agar hashrate maksimal
+nvcc -O3 -arch=sm_89 -o miner miner.cu
 
 if [ $? -ne 0 ]; then
     echo "Gagal compile! Cek pesan error nvcc."
@@ -39,7 +41,7 @@ echo "Start Nonce : $START_NONCE"
 echo "Harapan     : Miner harus nge-print FOUND:0x65d3947577da48e4d964a370ee4cbec46dcf460dc89373460000059f6af182a1"
 echo "--------------------------------------------------------"
 
-./cuda/miner $CHALLENGE $TARGET $START_NONCE 1 1 256
+./miner $CHALLENGE $TARGET $START_NONCE 1 1 256
 
 echo "--------------------------------------------------------"
 echo "Jika tulisan FOUND di atas ekornya sama persis (...182a1),"
