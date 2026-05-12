@@ -127,6 +127,14 @@ __global__ void mine_kernel(
 
         uint64_t nonce_low = base_nonce_low + i;
 
+        // Khusus untuk test-miner (1 grid, 1 block), print setiap langkahnya
+        if (gridDim.x == 1 && blockDim.x == 1) {
+            printf("[GPU] Memeriksa nonce ke-%d: 0x%016llx%016llx%016llx%016llx\n", 
+                   i + 1,
+                   (unsigned long long)n0, (unsigned long long)n1, 
+                   (unsigned long long)n2, (unsigned long long)nonce_low);
+        }
+
         // Initialize state to zero
         uint64_t state[25];
         uint64_t h0, h1, h2, h3;

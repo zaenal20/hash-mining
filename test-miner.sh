@@ -20,15 +20,15 @@ fi
 echo -e "\nCompile sukses! Menjalankan verifikasi...\n"
 
 # Challenge asli dari transaksi sukses
-CHALLENGE="e2bc94782f473999e5d0e107cc2e54848c172f8a5704cff9558e55d8d77e1992"
+CHALLENGE="5bcc23a21849ceebf4885d7580babf6cfbbaec4a66941e36d57a2946ad2ad2b1"
 
-# Hash asli yang ketemu adalah 0x000000000000011c...
+# Hash asli yang ketemu adalah 0x000000000000125b...
 # Kita pasang target sedikit di atasnya biar dianggap "sukses" oleh miner lu
-TARGET="000000000000011d000000000000000000000000000000000000000000000000"
+TARGET="000000000000125c000000000000000000000000000000000000000000000000"
 
-# Nonce pemenang aslinya adalah berakhiran ...182a1 (a1 hex = 161 decimal)
-# Kita mulai pencarian dari ...18200 (161 langkah sebelum menang)
-START_NONCE="65d3947577da48e4d964a370ee4cbec46dcf460dc89373460000059f6af18200"
+# Nonce pemenang aslinya adalah berakhiran ...dc65
+# Kita mulai pencarian dari ...dc01 (sekitar 100 langkah sebelum menang)
+START_NONCE="b3beebac11185eda01b9832e4675e41c430a31e09a32a246000000066140dc01"
 
 # Kita jalankan: 
 # - 1 grid
@@ -38,11 +38,9 @@ echo "Menjalankan miner..."
 echo "Challenge   : $CHALLENGE"
 echo "Target      : $TARGET"
 echo "Start Nonce : $START_NONCE"
-echo "Harapan     : Miner harus nge-print FOUND:0x65d3947577da48e4d964a370ee4cbec46dcf460dc89373460000059f6af182a1"
+echo "Expected    : FOUND:0xb3beebac11185eda01b9832e4675e41c430a31e09a32a246000000066140dc65"
 echo "--------------------------------------------------------"
 
 ./miner $CHALLENGE $TARGET $START_NONCE 1 1 256
 
 echo "--------------------------------------------------------"
-echo "Jika tulisan FOUND di atas ekornya sama persis (...182a1),"
-echo "maka algoritma endianness, padding, state-loop, dsb SUDAH 100% PERFECT!"
