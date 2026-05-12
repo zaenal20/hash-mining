@@ -123,15 +123,22 @@ async function main() {
 
             // Start CUDA miner
             const noncePromise = new Promise((resolve, reject) => {
-                miner.once('found', (nonce) => resolve(nonce));
-                miner.once('exit', (code) => {
+                const onFound = (nonce) => {
+                    miner.removeListener('exit', onExit);
+                    resolve(nonce);
+                };
+                const onExit = (code) => {
+                    miner.removeListener('found', onFound);
                     if (code !== 0 && code !== null) {
                         reject(new Error(`Miner exited with error code: ${code}`));
                     } else {
                         // Killed intentionally (SIGTERM from epoch change or shutdown)
                         resolve(null);
                     }
-                });
+                };
+                
+                miner.once('found', onFound);
+                miner.once('exit', onExit);
             });
 
             miner.start(challengeHex, targetHex, startNonce);
