@@ -136,24 +136,24 @@ async function main() {
                         resolve(null);
                     }
                 };
-                
+
                 miner.once('found', onFound);
                 miner.once('exit', onExit);
             });
 
             miner.start(challengeHex, targetHex, startNonce);
 
-            // Also poll for epoch changes
+            // Poll for epoch changes - managed properly to avoid leaks
+            let epochChanged = false;
             const epochCheck = setInterval(async () => {
                 try {
-                    const newEpoch = (await contract.getMiningState()).epoch;
-                    if (newEpoch !== currentEpoch) {
-                        log.warn('Epoch changed during mining! Restarting...');
+                    const state = await contract.getMiningState();
+                    if (state.epoch !== currentEpoch) {
+                        log.warn(`Epoch changed: ${currentEpoch} -> ${state.epoch}. Restarting...`);
+                        epochChanged = true;
                         miner.stop();
                     }
-                } catch (e) {
-                    // ignore polling errors
-                }
+                } catch (e) {}
             }, EPOCH_POLL_MS);
 
             // Wait for solution
@@ -161,12 +161,16 @@ async function main() {
             try {
                 nonce = await noncePromise;
             } catch (e) {
-                clearInterval(epochCheck);
                 log.warn(`Mining error: ${e.message}. Retrying...`);
-                await sleep(2000);
+                nonce = null;
+            } finally {
+                clearInterval(epochCheck);
+            }
+
+            if (nonce === null) {
+                await sleep(1000);
                 continue;
             }
-            clearInterval(epochCheck);
 
             // null = miner was stopped intentionally (epoch change), restart loop
             if (nonce === null) {
