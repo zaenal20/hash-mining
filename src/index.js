@@ -124,33 +124,32 @@ async function main() {
             // Start CUDA miner
             const noncePromise = new Promise((resolve, reject) => {
                 const onFound = (nonce) => {
-                    miner.removeListener('exit', onExit);
+                    miner.off('exit', onExit);
+                    miner.off('found', onFound);
                     resolve(nonce);
                 };
                 const onExit = (code) => {
-                    miner.removeListener('found', onFound);
+                    miner.off('found', onFound);
+                    miner.off('exit', onExit);
                     if (code !== 0 && code !== null) {
                         reject(new Error(`Miner exited with error code: ${code}`));
                     } else {
-                        // Killed intentionally (SIGTERM from epoch change or shutdown)
                         resolve(null);
                     }
                 };
 
-                miner.once('found', onFound);
-                miner.once('exit', onExit);
+                miner.on('found', onFound);
+                miner.on('exit', onExit);
             });
 
             miner.start(challengeHex, targetHex, startNonce);
 
             // Poll for epoch changes - managed properly to avoid leaks
-            let epochChanged = false;
             const epochCheck = setInterval(async () => {
                 try {
                     const state = await contract.getMiningState();
                     if (state.epoch !== currentEpoch) {
                         log.warn(`Epoch changed: ${currentEpoch} -> ${state.epoch}. Restarting...`);
-                        epochChanged = true;
                         miner.stop();
                     }
                 } catch (e) {}
@@ -168,14 +167,8 @@ async function main() {
             }
 
             if (nonce === null) {
-                await sleep(1000);
-                continue;
-            }
-
-            // null = miner was stopped intentionally (epoch change), restart loop
-            if (nonce === null) {
                 log.info('Miner stopped, restarting with fresh challenge...');
-                await sleep(500);
+                await sleep(1000);
                 continue;
             }
 
