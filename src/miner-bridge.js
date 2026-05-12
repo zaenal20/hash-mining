@@ -14,12 +14,7 @@ class MinerBridge extends EventEmitter {
     }
 
     start(challengeHex, targetHex, startNonce = 0) {
-        if (this.process) {
-            const oldProcess = this.process;
-            oldProcess.removeAllListeners();
-            oldProcess.kill('SIGTERM');
-            this.process = null;
-        }
+        if (this.process) this.stop();
 
         // Remove 0x prefix if present
         const challenge = challengeHex.startsWith('0x') ? challengeHex.slice(2) : challengeHex;
@@ -34,16 +29,14 @@ class MinerBridge extends EventEmitter {
             this.noncesPerThread.toString(),
         ];
 
-        const proc = spawn(this.cudaBinaryPath, args, {
+        this.process = spawn(this.cudaBinaryPath, args, {
             stdio: ['pipe', 'pipe', 'pipe'],
         });
-        
-        this.process = proc;
         this.running = true;
 
         let stdoutBuffer = '';
 
-        proc.stdout.on('data', (data) => {
+        this.process.stdout.on('data', (data) => {
             stdoutBuffer += data.toString();
             const lines = stdoutBuffer.split('\n');
             stdoutBuffer = lines.pop(); // keep incomplete line
@@ -56,35 +49,28 @@ class MinerBridge extends EventEmitter {
             }
         });
 
-        proc.stderr.on('data', (data) => {
+        this.process.stderr.on('data', (data) => {
             const msg = data.toString().trim();
             if (msg) this.emit('log', msg);
         });
 
-        proc.on('exit', (code) => {
-            if (this.process === proc) {
-                this.running = false;
-                this.process = null;
-                this.emit('exit', code);
-            }
+        this.process.on('exit', (code) => {
+            this.running = false;
+            this.process = null;
+            this.emit('exit', code);
         });
 
-        proc.on('error', (err) => {
-            if (this.process === proc) {
-                this.running = false;
-                this.process = null;
-                this.emit('error', err);
-            }
+        this.process.on('error', (err) => {
+            this.running = false;
+            this.emit('error', err);
         });
     }
 
     stop() {
         if (this.process) {
-            const proc = this.process;
+            this.process.kill('SIGTERM');
             this.process = null;
             this.running = false;
-            proc.removeAllListeners();
-            proc.kill('SIGTERM');
         }
     }
 
