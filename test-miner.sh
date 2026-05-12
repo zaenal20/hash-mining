@@ -9,8 +9,8 @@
 
 echo "Membangun ulang (compiling) miner..."
 cd cuda
-# Flag -arch=sm_89 sangat disarankan untuk RTX 4090/5090 agar hashrate maksimal
-nvcc -O3 -arch=sm_89 -o miner miner.cu
+# Versi CUDA VPS lu pakai versi lama, jadi kita hilangkan -arch=sm_89 agar otomatis menyesuaikan
+nvcc -O3 -o miner miner.cu
 
 if [ $? -ne 0 ]; then
     echo "Gagal compile! Cek pesan error nvcc."
